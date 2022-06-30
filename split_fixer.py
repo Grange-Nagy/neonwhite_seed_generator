@@ -1,9 +1,9 @@
-path = r"C:\\Users\\Fabio\Downloads\\neon_white_splits\\dirty_rightsplit.lss"
-asl_path = r"C:\\DEV\\neonwhite\\neonwhite_master.asl"
-asl_path_out = r"C:\\DEV\\neonwhite\\neonwhite_generated.asl"
-new_order_path = r"C:\\DEV\\neonwhite\\new_order.txt"
-splitinfo_path = r"C:\\DEV\\neonwhite\\splitinfo.txt"
-new_splitinfo_path = r"C:\\DEV\\neonwhite\\splitinfo_new.txt"
+asl_path = r"neonwhite.asl"
+asl_path_out = r"neonwhite_shuffle.asl"
+new_order_path = r"new_order.txt"
+splitinfo_path = r"splitinfo.txt"
+new_splitinfo_path = r"splitinfo_shuffle.txt"
+level_map_path = r"level_mappings.txt"
 
 with open(splitinfo_path, "r") as f:
     splitinfo = f.read()
@@ -11,11 +11,20 @@ with open(splitinfo_path, "r") as f:
 with open(new_order_path) as f:
     new_order = f.read()
 
-with open(path) as f:
-    file_original = f.read()
+with open(level_map_path) as f:
+    level_map = f.read()
+
+
+level_to_engine_map = {}
+for line in level_map.splitlines():
+    level, engine = line.split(',')
+    level_to_engine_map[level] = engine.strip()
 
 splitinfo_lookup = {}
 for line in splitinfo.splitlines():
+    if len(line.split('\t')) == 1:
+        splitinfo_lookup[line] = (0,str(0))
+        continue
     name,_,pb,best = line.split("\t")
     if ':' in pb:
         pb = int(pb.split(':')[0]) * 60 + float(pb.split(':')[1])
@@ -54,7 +63,7 @@ with open(asl_path, "r") as f:
     asl_file = f.read()
 
 # TODO: need mapping from ingame names to inengine names
-inengine_name = "GRID_BOOP"
+inengine_name = level_to_engine_map[new_order.splitlines()[0]]
 
 asl_file = asl_file.replace("STAGE_NAME", inengine_name)
 

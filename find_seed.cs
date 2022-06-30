@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-
-
-
+using System.IO;
+using System.Threading.Tasks;
 
 class TestClass
 {
@@ -47,18 +46,59 @@ class TestClass
         bool_strs.Add("False", 0);
         bool_strs.Add("false", 0);
 
+        Dictionary<int, string> idx_to_levelMappings = new Dictionary<int, string>();
+        Dictionary<string, int> level_to_idxMappings = new Dictionary<string, int>();
+        
+        string[] level_names = System.IO.File.ReadAllLines("clean_levelnames.txt");
+        for (int i = 0; i < level_names.Length; ++i)
+        {
+            idx_to_levelMappings[i] = level_names[i];
+            level_to_idxMappings[level_names[i].ToLower()] = i;
+        }
+        
+        if (args.Length == 3)
+        {
+            if (args[0] == "-g" || args[0] == "--generate")
+            {   
+                int num_Levels;
+                try
+                {
+                    num_Levels = rush_levels[args[1]];
+                }
+                catch (System.Collections.Generic.KeyNotFoundException)
+                {
+                    Console.WriteLine("Unknown rush name: " + args[0]);
+                    return;
+                }
+                if (num_Levels != 96)
+                {
+                    Console.WriteLine("Only 96 level rushes are supported for now.");
+                    return;
+                }
+                int seed = int.Parse(args[2]);
+                int[] randomized_Index = RandomizeIndex(num_Levels, seed);
+                File.WriteAllLines("new_order.txt", randomized_Index.Select(x => idx_to_levelMappings[x]).ToArray());
+            }
+            return;
+        }
+
         if (args.Length != 4)
         {
-            Console.WriteLine("Usage: find_seed.exe <rush_name> <order_matters> <start_sequence> <search_depth>");
+            Console.WriteLine("Usage:\n\tfind_seed.exe <rush_name> <order_matters> <start_sequence> <level_depth>");
+            Console.WriteLine("\tfind_seed.exe -g <rush_name> <seed>");
             Console.WriteLine("");
             Console.WriteLine("\trush_name: (White|Mikey|Yellow|Violet|Red) name of rush, case insensitive");
             Console.WriteLine("\torder_matters: (True|False) True if you care about the exact order of the starting levels (this may result in very long computation for large level sequences)");
             Console.WriteLine("\tstart_sequence: A comma-separated list (no spaces) of levels in the desired starting sequence (1-indexed or as strings, case insensitive)");
-            Console.WriteLine("\tsearch_depth: (int) for a non-ordered sequence, the number levels into the run to search for the desired levels");
+            Console.WriteLine("\tlevel_depth: (int) for a non-ordered sequence, the number levels into the run to search for the desired levels");
+            Console.WriteLine("\tseed: (int) seed to generate order from");
             Console.WriteLine("");
             Console.WriteLine("\texample: find_seed.exe White False \"The Third Temple,absolution,The Clocktower\" 3");
-            Console.WriteLine("\t\tThis will find the seed that plays White'ss rush, with the first 3 levels being the boss levels of the rush");
+            Console.WriteLine("\t\tThis will find the seed that plays White's rush, with the first 3 levels being the boss levels of the rush");
             Console.WriteLine("\t\t(it should be 58685, with starting sequence of Absolution,The Clocktower,The Third Temple,Pop,Shield,Cleaner,...)");
+            Console.WriteLine("");
+            Console.WriteLine("\texample: find_seed.exe -g White 87921");
+            Console.WriteLine("\t\tThis will generate the sequence of levels for seed 87921 and write it to new_order.txt");
             Console.WriteLine("");
             Console.WriteLine("\texample: find_seed.exe yellow True 8,7,6,5,4,3,2,1 8");
             Console.WriteLine("\t\tThis will find the seed that plays the 8 level rushes backwards (it should be 121166)");
@@ -71,34 +111,26 @@ class TestClass
             
             return;
         }
+       
 
         int numLevels;
         int orderMatters;
-        Dictionary<int, string> idx_to_levelMappings = new Dictionary<int, string>();
-        Dictionary<string, int> level_to_idxMappings = new Dictionary<string, int>();
-        
-        string[] level_names = System.IO.File.ReadAllLines(@"C:\DEV\neonwhite\level_mappings.txt");
-        for (int i = 0; i < level_names.Length; ++i)
-        {
-            idx_to_levelMappings[i] = level_names[i];
-            level_to_idxMappings[level_names[i].ToLower()] = i;
-        }
-       
 
         try
         {
             numLevels = rush_levels[args[0]];
         }
-        catch (System.Collections.Generic.KeyNotFoundException e)
+        catch (System.Collections.Generic.KeyNotFoundException)
         {
             Console.WriteLine("Unknown rush name: " + args[0]);
             return;
         }
+
          try
         {
         orderMatters = bool_strs[args[1]];
         }
-        catch (System.Collections.Generic.KeyNotFoundException e)
+        catch (System.Collections.Generic.KeyNotFoundException)
         {
             Console.WriteLine("Unknown order matters value: " + args[1]);
             return;
@@ -117,9 +149,9 @@ class TestClass
             {
             targetArray = args[2].Split(',').Select(x => level_to_idxMappings[x.ToLower()]).ToArray();
              }
-            catch (System.Collections.Generic.KeyNotFoundException e)
+            catch (System.Collections.Generic.KeyNotFoundException)
             {
-                Console.WriteLine("Error: Unknown level name: " + e.Message);
+                Console.WriteLine("Error: Unknown level name somewhere in: " + args[2]);
                 return;
             }
         }
@@ -135,7 +167,7 @@ class TestClass
             searchDepth = targetArray.Length;
         }
         
-        int ranseed = 306415093;
+        int ranseed = 1;
 
         HashSet<int> targetSet = new HashSet<int>(targetArray);
 
@@ -157,8 +189,8 @@ class TestClass
             
             if (ranseed == 2147483647) 
             {   
-                Console.WriteLine("No seed found for the given starting sequence");
-                break;
+                Console.WriteLine("No seed found for the given search parameters");
+                return;
             }
 
             ranseed++;
@@ -169,6 +201,8 @@ class TestClass
         }
         Console.WriteLine("Seed: " + ranseed);
         Console.WriteLine("SeedSequence: " + string.Join(",", randomizedIndex.Select(x => x+1)));   // 1-index it
-        Console.WriteLine("Names:\n" + string.Join("\n", randomizedIndex.Select(x => idx_to_levelMappings[x])));
+        //Console.WriteLine("Names:\n" + string.Join("\n", randomizedIndex.Select(x => idx_to_levelMappings[x])));
+
+        
     }
 }
